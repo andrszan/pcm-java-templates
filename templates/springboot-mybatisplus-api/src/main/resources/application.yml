@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: springboot-mybatisplus-api
+  datasource:
+    # 默认 MySQL 协议；派生项目选择 PostgreSQL 时在 .env 中设置 DB_PROTOCOL=jdbc:postgresql
+    url: ${DB_PROTOCOL:jdbc:mysql}://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  flyway:
+    # {vendor} 由数据源 URL 自动替换为 mysql 或 postgresql，实现双数据库按目录路由
+    locations: classpath:db/migration/{vendor}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 业务 API 统一前缀；业务 controller 经 /api/v1 挂载
+api:
+  prefix: ${API_PREFIX:/api/v1}
+
+# CORS：逗号分隔来源列表，缺省=关闭；始终不允许携带凭据
+cors:
+  origins: ${CORS_ORIGINS:}
+
+springdoc:
+  api-docs:
+    enabled: ${ENABLE_API_DOCS:true}
+  swagger-ui:
+    enabled: ${ENABLE_API_DOCS:true}
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+  pattern:
+    # requestId 由 RequestContextFilter 写入 MDC
+    console: "%clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(%5p) %clr([%X{requestId:-}]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n"
