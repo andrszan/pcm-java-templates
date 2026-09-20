@@ -1,4 +1,7 @@
 spring:
+  config:
+    # 本地 .env 按 UTF-8 Java properties 读取；环境变量和 JVM 参数仍可覆盖。
+    import: "optional:file:./.env[.properties][encoding=UTF-8]"
   application:
     name: springboot-mybatisplus-api
   datasource:

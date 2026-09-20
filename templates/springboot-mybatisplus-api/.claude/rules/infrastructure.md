@@ -9,7 +9,8 @@ paths:
 # 基础设施规范
 
 - `Application` 只做启动装配与 `@MapperScan`；`common/` 只承担统一响应、错误处理、请求上下文过滤器和 CORS，`config/` 只放基础设施配置，不加入业务专属工具。
-- 新运行配置统一加入 `application.yml` 并用 `${ENV:default}` 占位符读取，不在业务模块调用 `System.getenv`；同步 `.env.example`、README 和测试。密钥来自运行环境，不写入源码、日志、测试输出或文档。
+- 本地配置由 `application.yml` 的 `spring.config.import` 从项目根 `.env` 按 UTF-8 Java properties 导入；不执行 shell `source`，也不增加第三方 dotenv 解析依赖。操作系统环境变量、JVM 系统属性和命令行参数继续作为更高优先级来源。应用和测试统一通过 Spring Environment / Config Data 读取配置，不直接调用 `System.getenv`。
+- 新运行配置统一加入 `application.yml` 并用 `${ENV:default}` 占位符读取，同步 `.env.example`、README 和测试。密钥来自受保护 `.env` 或更高优先级运行环境，不写入源码、日志、测试输出或文档。
 - 数据库连接 URL 由 `DB_PROTOCOL`、`DB_HOST`、`DB_PORT`、`DB_NAME` 与 `DB_USER`、`DB_PASSWORD` 组成；凭据与完整数据库 URL 不写入日志或错误响应。
 - `API_PREFIX`、`CORS_ORIGINS`、`ENABLE_API_DOCS`、`LOG_LEVEL` 是全局运行配置。CORS 仅使用 allowlist，默认关闭且始终禁用 credentials；调整跨域行为前验证错误响应与 `X-Request-ID` 头。
 - `RequestContextFilter` 负责 request-id、MDC 与访问日志：外部请求 ID 只接受 `[A-Za-z0-9._-]{1,128}`，否则生成新 ID。访问日志只记录请求 ID、方法、路径、状态和耗时，不记录 query string、body、Authorization、Cookie、token、密码或数据库 URL。

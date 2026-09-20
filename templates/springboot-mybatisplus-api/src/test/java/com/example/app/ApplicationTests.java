@@ -2,29 +2,39 @@ package com.example.app;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.util.StringUtils;
 
 /**
  * 数据库集成测试：验证数据源、MyBatis-Plus 和 Flyway 迁移链路真实可用。
- * 测试始终连接 TEST_DB_NAME 指定的测试库，不影响开发库。
- * 未配置 TEST_DB_NAME 时跳过（与 Python 模板的缺库跳过模式一致）。
+ * 测试与应用使用同一套 Spring Config Data，并始终连接 TEST_DB_NAME 指定的测试库。
+ * 未配置 TEST_DB_NAME 时跳过需要真实数据库的集成测试。
  */
 @SpringBootTest
-@EnabledIfEnvironmentVariable(named = "TEST_DB_NAME", matches = ".+",
+@EnabledIf(value = "testDatabaseConfigured",
         disabledReason = "未配置 TEST_DB_NAME 时跳过需要真实数据库的集成测试")
 class ApplicationTests {
+
+    private static final ConfigurableEnvironment CONFIGURATION = loadConfiguration();
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @DynamicPropertySource
     static void useTestDatabase(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> protocol() + "://" + host() + ":" + port() + "/" + required("TEST_DB_NAME"));
+        registry.add("DB_NAME", () -> CONFIGURATION.getRequiredProperty("TEST_DB_NAME"));
+    }
+
+    static boolean testDatabaseConfigured() {
+        return StringUtils.hasText(CONFIGURATION.getProperty("TEST_DB_NAME"));
     }
 
     @Test
@@ -33,29 +43,10 @@ class ApplicationTests {
         Assertions.assertEquals(1, jdbcTemplate.queryForObject("SELECT 1", Integer.class));
     }
 
-    private static String protocol() {
-        return env("DB_PROTOCOL", "jdbc:mysql");
-    }
-
-    private static String host() {
-        return env("DB_HOST", "127.0.0.1");
-    }
-
-    private static String port() {
-        return env("DB_PORT", "3306");
-    }
-
-    private static String env(String key, String defaultValue) {
-        String value = System.getenv(key);
-        return value == null || value.isBlank() ? defaultValue : value;
-    }
-
-    private static String required(String key) {
-        String value = System.getenv(key);
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("缺少必需环境变量 " + key);
-        }
-        return value;
+    private static ConfigurableEnvironment loadConfiguration() {
+        ConfigurableEnvironment environment = new StandardEnvironment();
+        ConfigDataEnvironmentPostProcessor.applyTo(environment);
+        return environment;
     }
 
 }
